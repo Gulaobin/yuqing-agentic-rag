@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
 
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.12.3
     ports:
       - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
     volumes:
@@ -35,7 +35,7 @@ services:
 
   # 一次性任务：等 ollama 健康后拉取嵌入模型；模型已在卷里时几秒内结束
   ollama-pull:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.12.3
     environment:
       OLLAMA_HOST: http://ollama:11434
     command: ["pull", "${EMBED_MODEL:-qwen3-embedding:0.6b}"]

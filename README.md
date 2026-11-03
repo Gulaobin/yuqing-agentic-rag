@@ -19,7 +19,7 @@ python scripts/check_services.py     # 三项都是 [OK] 即就绪
 | 服务 | 地址 | 用途 |
 |---|---|---|
 | postgres（pgvector/pgvector:pg16） | 127.0.0.1:5432 | 知识库向量存储，首次启动自动启用 `vector` 扩展 |
-| ollama | 127.0.0.1:11434 | 嵌入模型 qwen3-embedding:0.6b，输出 1024 维 |
+| ollama（ollama/ollama:0.12.3） | 127.0.0.1:11434 | 嵌入模型 qwen3-embedding:0.6b，输出 1024 维 |
 
 - 停止：`docker compose down`（数据卷保留）。
 - 修改 `infra/postgres/init/` 下的脚本后需要重建数据卷才会生效：`docker compose down -v`（会删除库中全部数据）。
