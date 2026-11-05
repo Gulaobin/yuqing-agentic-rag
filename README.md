@@ -55,3 +55,27 @@ python -m unittest                # 确定性、完整性、埋入规律反查
 | P-008 | EVT-0005 / 0011 / 0024 | 同一账号是这三个事件且仅这三个事件的首发账号 |
 
 生成时会把每条规律写库后再用 SQL 反查一遍，任何一条不成立就报错退出；反查得到的具体编号和数值写在 manifest 的 `facts` 里。
+
+## 知识库
+
+`data/docs/` 下 40 篇 Markdown 文档（研判规范 10、方法说明 10、历史复盘 20），由模型辅助起草、人工审定。规范里的分级阈值、状态规则、新注册账号定义等数字与数据生成器的派生规则一致，`tests/test_corpus.py` 会检查。
+
+```bash
+pip install -r requirements.txt               # psycopg
+python -m yuqing.knowledge.ingest --dry-run   # 只解析和分块：40 篇、144 块
+python -m yuqing.knowledge.ingest             # 嵌入并在一个事务里重建 kb_documents / kb_chunks / kb_meta
+python -m yuqing.knowledge.search "哪一级舆情需要当天上报？"
+```
+
+- 分块：按 Markdown 标题分节，节内按空行分段，超过 400 字依次按行、按句末标点、按字数切开；每块记录在原文中的起止位置，`chunk.text == body[start:end]`。
+- 嵌入：Ollama `/api/embed`，文档侧输入「标题路径 + 正文」，查询侧按 Qwen3-Embedding 的建议加任务说明前缀。
+- 存储：pgvector `vector(EMBED_DIM)` + HNSW 余弦索引；`kb_meta` 记录嵌入模型和维度，检索时不一致会拒绝执行。
+
+### 测试
+
+```bash
+python -m unittest                            # 不需要服务的测试（需要服务的自动跳过）
+$env:YUQING_INTEGRATION="1"; python -m unittest; Remove-Item Env:YUQING_INTEGRATION   # PowerShell，需先 docker compose up
+```
+
+集成测试会重建正式知识库，并检查 6 个语义问题能否在前 5 个片段里检索到对应文档；存储测试用独立的 `kb_test` schema，不影响正式数据。
