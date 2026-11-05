@@ -24,3 +24,6 @@ var/
 .idea/
 .DS_Store
 Thumbs.db
+
+# 生成的数据（用 python -m datagen 重新生成）
+data/generated/
