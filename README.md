@@ -118,3 +118,29 @@ python -m yuqing.agent.replay                       # 从事件日志重放最�
 - **预算**：模型一次要的工具超过余额时只执行余额内的；只剩最后一次模型调用或工具用完时只提供 `submit_answer`，并提示立即提交。
 - **业务数据工具**：只读连接；表名、列名、过滤条件写死在代码里，参数一律绑定。
 - **事件日志**：`var/events.sqlite`，每次模型和工具调用前后各一条，工具调用通过 `parent_call_id` 指回发起它的模型调用。
+
+## 接口与聊天页
+
+```bash
+pip install -r requirements.txt
+python -m yuqing.api            # 浏览器打开 http://127.0.0.1:8000
+```
+
+| 接口 | 说明 |
+|---|---|
+| `POST /api/runs` | `{"question": "...", "config": "v0.1"}`，立即返回 202 和 `run_id`，Agent 在后台线程运行 |
+| `GET /api/runs/{run_id}?after=<seq>` | 返回 seq 之后的新事件；`done` 为真时 `result` 是最终结果 |
+| `GET /api/configs` | 可用配置 |
+
+运行状态不放内存：是否结束看最后一条事件是不是 `run.finished` / `run.failed`，服务重启后已结束的运行照样能查。聊天页是单个 HTML 文件，每 0.6 秒轮询一次新事件。
+
+## 评测
+
+`eval/questions.json`：5 类各 3 题（知识单点、知识跨文档、实例单跳、实例多跳、应拒答）。规则判分：必需内容按正则匹配、引用的证据编号要包含指定文档或记录、应拒答题要明确表示无法确定。实例题的标准答案来自数据生成器埋入的规律，`tests/test_eval.py` 会与生成数据核对。
+
+```bash
+python -m yuqing.evaluation.run                  # v0.1 与 fixed 各跑 15 题，约 5 分钟
+python -m yuqing.evaluation.run --only S1,M3     # 只跑部分题
+```
+
+结果写入 `eval/results/<label>.json`。按题型分开报告、不算混合总分：一个永远回答「无法确定」的模型也能拿满应拒答的 3 分。

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>舆情研判</title>
+<style>
+  :root {
+    --mist: #eef1ec; --paper: #f8f9f6; --ink: #1e2621; --ink-2: #3a463e; --ink-3: #5f6a62;
+    --line: #d8ded6; --moss: #3f6650; --moss-soft: #e3ebe5; --ochre: #8a6820; --madder: #9a4740;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--mist); color: var(--ink);
+         font: 15px/1.6 "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+  header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+  header span { color: var(--ink-3); font-size: 13px; }
+  form { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  textarea { width: 100%; min-height: 64px; resize: vertical; border: 0; outline: 0; background: transparent;
+             font: inherit; color: var(--ink); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+  .chip { border: 1px solid var(--line); background: var(--mist); color: var(--ink-2); border-radius: 999px;
+          padding: 3px 10px; font-size: 13px; cursor: pointer; }
+  .chip:hover { border-color: var(--moss); color: var(--moss); }
+  .spacer { flex: 1; }
+  select, button { font: inherit; border-radius: 8px; padding: 6px 12px; border: 1px solid var(--line); background: #fff; }
+  button { background: var(--moss); color: #fff; border-color: var(--moss); cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+  @media (max-width: 820px) { main { grid-template-columns: 1fr; } }
+  section { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-height: 160px; }
+  section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--moss); letter-spacing: 1px; }
+  .muted { color: var(--ink-3); font-size: 13px; }
+  ol.trace { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  ol.trace li { padding: 4px 0; border-bottom: 1px dashed var(--line); word-break: break-all; }
+  ol.trace li.tool { padding-left: 16px; }
+  ol.trace li.result { padding-left: 32px; color: var(--ink-3); }
+  ol.trace li.bad { color: var(--madder); }
+  ol.trace code { font-family: "JetBrains Mono", Consolas, monospace; font-size: 12px; }
+  .question { font-weight: 600; margin-bottom: 8px; }
+  ol.conclusions { margin: 0; padding-left: 20px; }
+  ol.conclusions li { margin-bottom: 8px; }
+  .ev { display: inline-block; margin: 2px 4px 0 0; padding: 0 6px; border-radius: 4px; background: var(--moss-soft);
+        color: var(--moss); font: 12px/1.6 "JetBrains Mono", Consolas, monospace; }
+  .unknowns { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--ochre); }
+  .unknowns ul { margin: 4px 0 0; padding-left: 20px; }
+  .plain { white-space: pre-wrap; }
+  .stats { margin-top: 12px; color: var(--ink-3); font-size: 12px; }
+  .error { color: var(--madder); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>舆情研判</h1><span>Agentic RAG · v0.1</span></header>
+
+  <form id="ask">
+    <textarea id="question" placeholder="输入研判问题，例如：EVT-0021 的热度还在上升吗？依据是什么？" maxlength="500"></textarea>
+    <div class="row">
+      <span class="chip" data-q="EVT-0021 的热度还在上升吗？依据是什么？">热度趋势</span>
+      <span class="chip" data-q="EVT-0003 是谁先发的？后来是怎么扩散开的？">首发与放大</span>
+      <span class="chip" data-q="哪一级舆情需要当天上报？">上报时限</span>
+      <span class="spacer"></span>
+      <select id="config"><option value="v0.1">v0.1 自主检索</option><option value="fixed">fixed 对照</option></select>
+      <button id="submit" type="submit">提问</button>
+    </div>
+  </form>
+
+  <main>
+    <section>
+      <h2>运行轨迹</h2>
+      <div id="trace-empty" class="muted">提交问题后，这里会逐条显示模型调用、工具调用和结果。</div>
+      <ol id="trace" class="trace"></ol>
+    </section>
+    <section>
+      <h2>回答</h2>
+      <div id="answer" class="muted">等待提问。</div>
+    </section>
+  </main>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const short = (s, n = 120) => { s = (s || "").replace(/\s+/g, " "); return s.length > n ? s.slice(0, n) + "…" : s; };
+let timer = null;
+
+document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => { $("question").value = c.dataset.q; $("question").focus(); }));
+
+$("ask").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const question = $("question").value.trim();
+  if (!question) return;
+  clearTimeout(timer);
+  $("submit").disabled = true;
+  $("trace").replaceChildren();
+  $("trace-empty").hidden = true;
+  $("answer").className = "muted";
+  $("answer").textContent = "运行中…";
+  try {
+    const response = await fetch("/api/runs", { method: "POST", headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({ question, config: $("config").value }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail));
+    poll(data.run_id, 0);
+  } catch (error) {
+    showError(error.message);
+  }
+});
+
+async function poll(runId, after) {
+  try {
+    const response = await fetch(`/api/runs/${runId}?after=${after}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail);
+    data.events.forEach(renderEvent);
+    if (data.done) { renderResult(data.result, runId); $("submit").disabled = false; return; }
+    timer = setTimeout(() => poll(runId, data.last_seq), 600);
+  } catch (error) {
+    showError(error.message);
+  }
+}
+
+function addLine(cls, text) { $("trace").appendChild(el("li", cls, text)); }
+
+function renderEvent(e) {
+  const p = e.payload;
+  switch (e.type) {
+    case "run.started": addLine("", `问题：${p.question}（${p.config.name}）`); break;
+    case "model.request": addLine("", `→ 调用模型（可用：${p.tools.join("、") || "无工具"}）`); break;
+    case "model.response":
+      addLine("", `← ${p.latency_s}s · 输入 ${p.prompt_tokens} token · ` +
+                  (p.tool_calls.length ? `${p.tool_calls.length} 个工具调用` : `直接回复：${short(p.content, 60)}`));
+      break;
+    case "model.error": addLine("bad", `✗ 模型调用失败：${p.error}`); break;
+    case "tool.started": addLine("tool", `· ${p.name}(${short(p.arguments, 100)})`); break;
+    case "tool.result": addLine(p.ok ? "result" : "result bad", `${p.ok ? "✓" : "✗"} ${short(p.content)}`); break;
+    case "retrieval.result": addLine("tool", `· 固定检索：${p.hits.map((h) => h.chunk_id).join("、")}`); break;
+    case "answer.submitted": addLine(p.accepted ? "tool" : "tool bad", `· submit_answer：${p.accepted ? "已接受" : short(p.error)}`); break;
+    case "run.finished": addLine("", `结束：${p.status}`); break;
+    case "run.failed": addLine("bad", `失败：${p.error}`); break;
+  }
+}
+
+function renderResult(result, runId) {
+  const box = $("answer");
+  box.replaceChildren();
+  box.className = "";
+  if (result.type === "run.failed") { showError(result.error); return; }
+  const answer = result.answer;
+  if (answer.structured) {
+    const list = el("ol", "conclusions");
+    answer.conclusions.forEach((c) => {
+      const li = el("li", "", c.text + " ");
+      c.evidence.forEach((id) => li.appendChild(el("span", "ev", id)));
+      list.appendChild(li);
+    });
+    if (answer.conclusions.length) box.appendChild(list);
+    if (answer.unknowns.length) {
+      const u = el("div", "unknowns", "无法确定：");
+      const ul = el("ul");
+      answer.unknowns.forEach((t) => ul.appendChild(el("li", "", t)));
+      u.appendChild(ul);
+      box.appendChild(u);
+    }
+  } else {
+    box.appendChild(el("div", "plain", answer.text || "（空）"));
+  }
+  box.appendChild(el("div", "stats",
+    `${result.status} · 模型 ${result.model_calls} 次 · 工具 ${result.tool_calls} 次 · ` +
+    `输入 ${result.prompt_tokens} / 输出 ${result.completion_tokens} token · run_id ${runId}`));
+}
+
+function showError(message) {
+  $("answer").className = "error";
+  $("answer").textContent = `出错了：${message}`;
+  $("submit").disabled = false;
+}
+</script>
+</body>
+</html>

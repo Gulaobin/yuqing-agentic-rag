@@ -67,15 +67,26 @@ class EventLog:
             return int(cursor.lastrowid)
 
     def read(self, run_id: str, after_seq: int = 0) -> list[Event]:
-        rows = self._conn.execute(
-            "SELECT seq, run_id, ts, type, call_id, parent_call_id, payload FROM events "
-            "WHERE run_id = ? AND seq > ? ORDER BY seq",
-            (run_id, after_seq),
-        ).fetchall()
+        with self._lock:  # 同一个连接被多个线程共用，读也要串行
+            rows = self._conn.execute(
+                "SELECT seq, run_id, ts, type, call_id, parent_call_id, payload FROM events "
+                "WHERE run_id = ? AND seq > ? ORDER BY seq",
+                (run_id, after_seq),
+            ).fetchall()
         return [Event(*row[:6], json.loads(row[6])) for row in rows]
 
+    def last_event(self, run_id: str) -> Event | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT seq, run_id, ts, type, call_id, parent_call_id, payload FROM events "
+                "WHERE run_id = ? ORDER BY seq DESC LIMIT 1",
+                (run_id,),
+            ).fetchone()
+        return Event(*row[:6], json.loads(row[6])) if row else None
+
     def last_run_id(self) -> str | None:
-        row = self._conn.execute("SELECT run_id FROM events ORDER BY seq DESC LIMIT 1").fetchone()
+        with self._lock:
+            row = self._conn.execute("SELECT run_id FROM events ORDER BY seq DESC LIMIT 1").fetchone()
         return row[0] if row else None
 
     def close(self) -> None:
