@@ -144,7 +144,13 @@ def check_compatible(meta: dict[str, str], model: str, dim: int) -> None:
         )
 
 
-def search(conn: Any, query_vector: list[float], k: int = 5, schema: str = DEFAULT_SCHEMA) -> list[Hit]:
+def search(
+    conn: Any,
+    query_vector: list[float],
+    k: int = 5,
+    schema: str = DEFAULT_SCHEMA,
+    doc_type: str | None = None,
+) -> list[Hit]:
     s = _q(schema)
     literal = vector_literal(query_vector)
     with conn.cursor() as cur:
@@ -153,10 +159,29 @@ def search(conn: Any, query_vector: list[float], k: int = 5, schema: str = DEFAU
             SELECT c.chunk_id, c.doc_id, d.title, d.doc_type, c.section, c.content,
                    1 - (c.embedding <=> %(q)s::vector) AS similarity
             FROM {s}.kb_chunks c JOIN {s}.kb_documents d ON d.doc_id = c.doc_id
+            WHERE %(t)s::text IS NULL OR d.doc_type = %(t)s::text
             ORDER BY c.embedding <=> %(q)s::vector, c.chunk_id
             LIMIT %(k)s
             """,
-            {"q": literal, "k": k},
+            {"q": literal, "k": k, "t": doc_type},
         )
         rows = cur.fetchall()
     return [Hit(rank, *row[:6], float(row[6])) for rank, row in enumerate(rows, start=1)]
+
+
+def read_document(conn: Any, doc_id: str, schema: str = DEFAULT_SCHEMA) -> tuple[str, str, list[tuple[str, str]]] | None:
+    """返回 (标题, 类型, [(小节, 正文), ...])；同一小节的相邻分块合并。文档不存在时返回 None。"""
+    s = _q(schema)
+    with conn.cursor() as cur:
+        cur.execute(f"SELECT title, doc_type FROM {s}.kb_documents WHERE doc_id = %s", (doc_id,))
+        head = cur.fetchone()
+        if head is None:
+            return None
+        cur.execute(f"SELECT section, content FROM {s}.kb_chunks WHERE doc_id = %s ORDER BY seq", (doc_id,))
+        sections: list[tuple[str, str]] = []
+        for section, content in cur.fetchall():
+            if sections and sections[-1][0] == section:
+                sections[-1] = (section, sections[-1][1] + "\n\n" + content)
+            else:
+                sections.append((section, content))
+    return head[0], head[1], sections

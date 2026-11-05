@@ -29,7 +29,8 @@ class Conversation:
     def __init__(self, system: str):
         self._messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
         self._pending: dict[str, str] = {}  # 尚未回填结果的 tool_call_id → 工具名
-        self._answered: set[str] = set()
+        self._answered: set[str] = set()  # 上一条助手消息里已回填的 id
+        # 接口只要求同一条助手消息内配对；有些兼容实现每轮都从 call_0 编号，所以不同轮次之间允许 id 重复。
 
     @property
     def pending_tool_calls(self) -> list[str]:
@@ -52,11 +53,9 @@ class Conversation:
             ids = [c.id for c in tool_calls]
             if len(set(ids)) != len(ids):
                 raise ConversationError(f"同一条助手消息里 tool_call_id 重复：{ids}")
-            reused = [i for i in ids if i in self._answered]
-            if reused:
-                raise ConversationError(f"tool_call_id 与之前的调用重复：{reused}")
             message["tool_calls"] = [c.to_api() for c in tool_calls]
             self._pending = {c.id: c.name for c in tool_calls}
+            self._answered = set()
         self._messages.append(message)
 
     def add_tool_result(self, call_id: str, content: str) -> None:
