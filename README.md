@@ -79,3 +79,20 @@ $env:YUQING_INTEGRATION="1"; python -m unittest; Remove-Item Env:YUQING_INTEGRAT
 ```
 
 集成测试会重建正式知识库，并检查 6 个语义问题能否在前 5 个片段里检索到对应文档；存储测试用独立的 `kb_test` schema，不影响正式数据。
+
+## core 层
+
+`yuqing/core/` 是 Agent loop 的基座，只用标准库：
+
+| 模块 | 作用 |
+|---|---|
+| `llm.py` | OpenAI 兼容聊天客户端（非流式）：工具调用解析；429/5xx/网络错误按退避重试，4xx 不重试；报错不含 API Key |
+| `messages.py` | 对话容器：每个 tool_call 必须有且只有一条对应的工具结果，否则追加下一条消息时就报错 |
+| `tools.py` | 工具箱：JSON Schema 子集校验参数、填默认值；未知工具、非法 JSON、参数错误、工具异常都作为失败结果回填给模型 |
+| `budget.py` | 模型与工具调用预算；`must_answer` 为真时下一次调用不再提供工具 |
+
+在 `.env` 里填好 `MODEL_API_KEY`（以及需要时的 `MODEL_BASE_URL`、`MODEL_NAME`）后，用真实模型走一遍工具调用：
+
+```bash
+python -m yuqing.core.smoke
+```

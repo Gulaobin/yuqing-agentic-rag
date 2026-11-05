@@ -34,6 +34,13 @@ class Settings:
     embed_model: str
     embed_dim: int
     docs_dir: Path
+    model_base_url: str
+    model_name: str
+    model_api_key: str  # 可以为空；创建模型客户端时才要求必填
+    model_timeout: float
+
+    def __repr__(self) -> str:  # 不在日志和报错里打出密钥与口令
+        return f"Settings(postgres={self.postgres_host}:{self.postgres_port}/{self.postgres_db}, model={self.model_name})"
 
     @property
     def postgres_dsn(self) -> str:
@@ -62,4 +69,8 @@ def load_settings(env_file: Path | None = None) -> Settings:
         embed_model=get("EMBED_MODEL", "qwen3-embedding:0.6b"),
         embed_dim=int(get("EMBED_DIM", "1024")),
         docs_dir=Path(get("DOCS_DIR", str(ROOT / "data" / "docs"))),
+        model_base_url=get("MODEL_BASE_URL", "https://api.deepseek.com"),
+        model_name=get("MODEL_NAME", "deepseek-flash"),
+        model_api_key=values.get("MODEL_API_KEY", ""),
+        model_timeout=float(get("MODEL_TIMEOUT", "120")),
     )
