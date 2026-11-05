@@ -1,0 +1,951 @@
+{
+  "label": "v0.1",
+  "created_at": "2026-11-05T14:13:24",
+  "model": "deepseek-flash",
+  "configs": {
+    "v0.1": {
+      "name": "v0.1",
+      "tools": [
+        "search_docs",
+        "read_doc",
+        "query_events",
+        "query_posts",
+        "get_metrics"
+      ],
+      "max_model_calls": 10,
+      "max_tool_calls": 8,
+      "retrieval": "agentic",
+      "fixed_k": 5
+    },
+    "fixed": {
+      "name": "fixed",
+      "tools": [],
+      "max_model_calls": 1,
+      "max_tool_calls": 0,
+      "retrieval": "fixed",
+      "fixed_k": 5
+    }
+  },
+  "summary": {
+    "v0.1": {
+      "passed": 14,
+      "total": 15,
+      "by_type": {
+        "知识单点": {
+          "passed": 3,
+          "total": 3
+        },
+        "知识跨文档": {
+          "passed": 3,
+          "total": 3
+        },
+        "实例单跳": {
+          "passed": 3,
+          "total": 3
+        },
+        "实例多跳": {
+          "passed": 2,
+          "total": 3
+        },
+        "应拒答": {
+          "passed": 3,
+          "total": 3
+        }
+      },
+      "avg_model_calls": 3.53,
+      "avg_tool_calls": 4.53,
+      "avg_prompt_tokens": 16276,
+      "avg_completion_tokens": 1166,
+      "avg_latency_s": 9.7
+    },
+    "fixed": {
+      "passed": 9,
+      "total": 15,
+      "by_type": {
+        "知识单点": {
+          "passed": 3,
+          "total": 3
+        },
+        "知识跨文档": {
+          "passed": 3,
+          "total": 3
+        },
+        "实例单跳": {
+          "passed": 0,
+          "total": 3
+        },
+        "实例多跳": {
+          "passed": 0,
+          "total": 3
+        },
+        "应拒答": {
+          "passed": 3,
+          "total": 3
+        }
+      },
+      "avg_model_calls": 1.0,
+      "avg_tool_calls": 0.0,
+      "avg_prompt_tokens": 500,
+      "avg_completion_tokens": 212,
+      "avg_latency_s": 2.5
+    }
+  },
+  "records": [
+    {
+      "id": "K1",
+      "type": "知识单点",
+      "config": "v0.1",
+      "question": "哪个等级的舆情事件要求当天上报？",
+      "run_id": "c6ecbca1f069",
+      "status": "answered",
+      "answer": "1. 要求「当天上报」的是二级事件：须在当天 24 时前提交书面报告。 [STD-002#01]\n2. 一级事件时限更严（1 小时内电话报告值班领导、2 小时内提交书面报告），实际也必然当天完成；三级为 24 小时内录入研判系统并纳入当日日报，跨日则可能次日完成，四级仅纳入周报不单独上报。 [STD-002#01, STD-001#01]\n3. 上报时限从事件被确定等级时开始计算；若事件等级上升，须按新等级时限重新上报。 [STD-002#01, STD-002#03]\n无法确定：\n- 未说明等级在当天较晚时点确定（如临近 24 时）时，二级「当天 24 时前」是否可顺延，文档未给出细则",
+      "cited": [
+        "STD-001#01",
+        "STD-002#01",
+        "STD-002#03"
+      ],
+      "model_calls": 2,
+      "tool_calls": 2,
+      "prompt_tokens": 5667,
+      "completion_tokens": 498,
+      "latency_s": 8.05,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": true
+      }
+    },
+    {
+      "id": "K1",
+      "type": "知识单点",
+      "config": "fixed",
+      "question": "哪个等级的舆情事件要求当天上报？",
+      "run_id": "71d55d8abcdc",
+      "status": "unstructured",
+      "answer": "二级舆情事件要求当天上报：当天 24 时前提交书面报告 [STD-002#01]。",
+      "cited": [
+        "STD-002",
+        "STD-002#01"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 548,
+      "completion_tokens": 142,
+      "latency_s": 1.97,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": false
+      }
+    },
+    {
+      "id": "K2",
+      "type": "知识单点",
+      "config": "v0.1",
+      "question": "注册多久以内的账号算新注册账号？",
+      "run_id": "8f3312cd1bc0",
+      "status": "answered",
+      "answer": "1. 新注册账号指发帖时注册时间不足 7 天的账号，计算方法是用帖子发布时间减去账号注册时间（accounts.created_at），差值小于 7 天即为新注册账号。 [MTH-003#01]\n2. 是否为新注册账号要按具体某条帖子的发布时间判断，同一账号在不同时间发的帖子结论可能不同；也不能用账号编号大小判断新旧。 [MTH-003#02]\n3. 新注册账号本身不代表异常，是否构成疑似协同转发需另行按 MTH-002 判定（如按被转发帖分组、看 10 分钟窗口内账号数，不能仅凭有新号就判水军）。 [MTH-003#02, MTH-002#03, CASE-003#04]",
+      "cited": [
+        "CASE-003#04",
+        "MTH-002#03",
+        "MTH-003#01",
+        "MTH-003#02"
+      ],
+      "model_calls": 3,
+      "tool_calls": 3,
+      "prompt_tokens": 9739,
+      "completion_tokens": 440,
+      "latency_s": 4.33,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": false
+      }
+    },
+    {
+      "id": "K2",
+      "type": "知识单点",
+      "config": "fixed",
+      "question": "注册多久以内的账号算新注册账号？",
+      "run_id": "6f2261e92acf",
+      "status": "unstructured",
+      "answer": "发帖时注册时间不足 7 天的账号，称为新注册账号 [MTH-003#01]。\n\n计算方式是：用帖子的发布时间减去账号的注册时间，如果差值小于 7 天，就是新注册账号 [MTH-003#01]。需要注意的是，是否属于新注册账号取决于具体某条帖子的发布时间，因此同一账号在不同时间发布的帖子，判断结果可能不同 [MTH-003#02]。",
+      "cited": [
+        "MTH-003",
+        "MTH-003#01",
+        "MTH-003#02"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 470,
+      "completion_tokens": 131,
+      "latency_s": 1.81,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": false
+      }
+    },
+    {
+      "id": "K3",
+      "type": "知识单点",
+      "config": "v0.1",
+      "question": "一级舆情事件的首次回应时限是多少？",
+      "run_id": "c2be2cea7d37",
+      "status": "answered",
+      "answer": "1. 一级舆情事件的首次回应时限为「确定等级后 2 小时内」；首次回应指责任单位通过官方渠道发布第一条说明（STD-003#01）。 [STD-003#01]\n2. 该时限从事件被确定等级时开始计算，可与一级事件的上报时限对照：1 小时内电话报告值班领导、2 小时内提交书面报告（STD-002#01）。 [STD-002#01]\n3. 其他等级参照：二级 12 小时、三级 48 小时、四级按日常工作流程处理不设硬性时限；未在时限内完成首次回应的，研判报告须注明超时时长和原因（STD-003#01、STD-003#03）。 [STD-003#01, STD-003#03]",
+      "cited": [
+        "STD-002#01",
+        "STD-003#01",
+        "STD-003#03"
+      ],
+      "model_calls": 2,
+      "tool_calls": 2,
+      "prompt_tokens": 6262,
+      "completion_tokens": 390,
+      "latency_s": 4.17,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": false
+      }
+    },
+    {
+      "id": "K3",
+      "type": "知识单点",
+      "config": "fixed",
+      "question": "一级舆情事件的首次回应时限是多少？",
+      "run_id": "103be6011bd6",
+      "status": "unstructured",
+      "answer": "一级舆情事件的首次回应时限是**确定等级后 2 小时内** [STD-003#01]。\n\n补充说明：该时限指责任单位通过官方渠道发布第一条说明的时间要求 [STD-003#01]；若未在时限内完成首次回应，研判报告须注明超时时长和原因 [STD-003#03]。",
+      "cited": [
+        "STD-003",
+        "STD-003#01",
+        "STD-003#03"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 516,
+      "completion_tokens": 108,
+      "latency_s": 1.91,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": false
+      }
+    },
+    {
+      "id": "C1",
+      "type": "知识跨文档",
+      "config": "v0.1",
+      "question": "一个事件首帖后 72 小时内共有 400 条帖子，它属于几级？应在什么时限内提交书面报告？",
+      "run_id": "8b4e39ae1a98",
+      "status": "answered",
+      "answer": "1. 按分级标准，等级只按首帖后 72 小时内全网帖子总数（含原帖和转发）确定；400 条落在「不少于 350 条、不足 600 条」区间，因此该事件属于二级。 [STD-001#02]\n2. 二级事件应在当天 24 时前提交书面报告（时限从事件被确定等级时开始计算）。 [STD-002#01]\n3. 该书面报告须按 STD-005 撰写，至少包含事件概况、当前等级与状态、传播特征、主要风险、处置建议。 [STD-002#02]\n4. 因是二级事件，在状态变为「已平息」之前需每 6 小时更新一次研判结论。 [STD-003#02]\n无法确定：\n- 题目未给出具体事件编号，无法核实其 72 小时帖子总数在业务库中的实际统计值（若实际数值与 400 条不同，等级与时限需按实际数据重算）\n- 未说明确定等级的具体时间点，无法换算「当天 24 时前」对应的绝对时刻",
+      "cited": [
+        "STD-001#02",
+        "STD-002#01",
+        "STD-002#02",
+        "STD-003#02"
+      ],
+      "model_calls": 3,
+      "tool_calls": 4,
+      "prompt_tokens": 10421,
+      "completion_tokens": 701,
+      "latency_s": 7.7,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": true
+      }
+    },
+    {
+      "id": "C1",
+      "type": "知识跨文档",
+      "config": "fixed",
+      "question": "一个事件首帖后 72 小时内共有 400 条帖子，它属于几级？应在什么时限内提交书面报告？",
+      "run_id": "08136668d554",
+      "status": "unstructured",
+      "answer": "该事件在首帖后 72 小时内共有 400 条帖子，属于**二级**：二级标准为不少于 350 条、不足 600 条 [STD-001#02]。\n\n应提交书面报告的时限为：**当天 24 时前提交书面报告**；时限从事件被确定等级时开始计算 [STD-002#01]。",
+      "cited": [
+        "STD-001",
+        "STD-001#02",
+        "STD-002",
+        "STD-002#01"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 558,
+      "completion_tokens": 189,
+      "latency_s": 2.41,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": false
+      }
+    },
+    {
+      "id": "C2",
+      "type": "知识跨文档",
+      "config": "v0.1",
+      "question": "判定疑似协同转发时，参与的账号要满足什么条件？至少需要多少个账号、在多长时间内？",
+      "run_id": "552411367f54",
+      "status": "answered",
+      "answer": "1. 疑似协同转发需同时满足两条：至少10个新注册账号转发同一条帖子，且这些转发发生在任意10分钟的时间段之内。 [MTH-002#01]\n2. “新注册账号”指发帖时注册时间不足7天的账号（用帖子发布时间减账号注册时间，差值<7天），且要按每条帖子的发布时间逐一判断，不能凭账号编号判新旧。 [MTH-003, MTH-002#04]\n3. 判定按三步走：取事件全部转发帖并关联账号注册时间→筛出发帖时注册不足7天的账号→按被转发帖分组、组内按时间排序，计算任意10分钟窗口内的账号数。 [MTH-002#04]\n4. 转发正文完全相同、参与账号粉丝数普遍不足50、注册时间集中在同几天只是辅助特征，不单独作为判定依据，出现时应写入报告说明可信程度。 [MTH-002#02]\n5. 若新注册账号转发分散在数小时内、任意10分钟内不超过2个，或转发的是不同帖子，则不判定为协同转发，报告写明“有新注册账号参与，但时间分散，不构成疑似协同转发”。 [MTH-002#03]",
+      "cited": [
+        "MTH-002#01",
+        "MTH-002#02",
+        "MTH-002#03",
+        "MTH-002#04",
+        "MTH-003"
+      ],
+      "model_calls": 3,
+      "tool_calls": 4,
+      "prompt_tokens": 11245,
+      "completion_tokens": 636,
+      "latency_s": 6.19,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": false
+      }
+    },
+    {
+      "id": "C2",
+      "type": "知识跨文档",
+      "config": "fixed",
+      "question": "判定疑似协同转发时，参与的账号要满足什么条件？至少需要多少个账号、在多长时间内？",
+      "run_id": "dae374573b43",
+      "status": "unstructured",
+      "answer": "判定疑似协同转发需同时满足：\n\n- 参与账号为**新注册账号**；按查询步骤，即筛选**发帖时注册不足 7 天**的账号 [MTH-002#04]。\n- 至少 **10 个**新注册账号转发了**同一条帖子** [MTH-002#01]。\n- 这些转发发生在**任意 10 分钟的时间段之内** [MTH-002#01]。",
+      "cited": [
+        "MTH-002",
+        "MTH-002#01",
+        "MTH-002#04"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 487,
+      "completion_tokens": 404,
+      "latency_s": 3.45,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": false
+      }
+    },
+    {
+      "id": "C3",
+      "type": "知识跨文档",
+      "config": "v0.1",
+      "question": "二级舆情事件的上报时限和首次回应时限分别是什么？",
+      "run_id": "13e3696795df",
+      "status": "answered",
+      "answer": "1. 二级舆情事件的上报时限：在当天 24 时前提交书面报告（时限从事件被确定等级时开始计算），书面报告按 STD-005 撰写。 [STD-002#01]\n2. 二级舆情事件的首次回应时限：确定等级后 12 小时内，由责任单位通过官方渠道发布第一条说明。 [STD-003#01]\n3. 若未在时限内完成首次回应，研判报告须注明超时时长和原因。 [STD-003#03]\n4. 关联要求：二级事件在状态变为「已平息」之前需每 6 小时更新一次研判结论；等级上升时按新等级时限重新上报，等级下降时在下一份日报或周报中说明。 [STD-003#02, STD-002#03]\n无法确定：\n- 「当天 24 时」以自然日（当日 23:59）为界的具体口径，文档仅表述为当天 24 时前，未进一步说明跨日或非工作时间确定等级时的处理方式。",
+      "cited": [
+        "STD-002#01",
+        "STD-002#03",
+        "STD-003#01",
+        "STD-003#02",
+        "STD-003#03"
+      ],
+      "model_calls": 3,
+      "tool_calls": 4,
+      "prompt_tokens": 10076,
+      "completion_tokens": 570,
+      "latency_s": 5.83,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": true
+      }
+    },
+    {
+      "id": "C3",
+      "type": "知识跨文档",
+      "config": "fixed",
+      "question": "二级舆情事件的上报时限和首次回应时限分别是什么？",
+      "run_id": "ae71c15b73c1",
+      "status": "unstructured",
+      "answer": "二级舆情事件的两项时限如下：\n\n- **上报时限**：当天 24 时前提交书面报告 [STD-002#01]。该时限从事件被确定等级时开始计算 [STD-002#01]。\n- **首次回应时限**：确定等级后 12 小时内通过官方渠道发布第一条说明 [STD-003#01]。\n\n补充：若未在时限内完成首次回应，研判报告须注明超时时长和原因 [STD-003#03]；在事件状态变为「已平息」之前，每 6 小时更新一次研判结论 [STD-003#02]。",
+      "cited": [
+        "STD-002",
+        "STD-002#01",
+        "STD-003",
+        "STD-003#01",
+        "STD-003#02",
+        "STD-003#03"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 470,
+      "completion_tokens": 211,
+      "latency_s": 2.39,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": false
+      }
+    },
+    {
+      "id": "S1",
+      "type": "实例单跳",
+      "config": "v0.1",
+      "question": "EVT-0012 的热度峰值出现在首帖后第几小时？峰值那一小时有多少条帖子？",
+      "run_id": "324a84bfae73",
+      "status": "answered",
+      "answer": "1. EVT-0012 的热度峰值出现在首帖后第19小时，该小时帖子数为26条（含17条转发、26个去重账号）。 [EVT-0012]\n2. 该事件72小时总帖子数300条，峰值小时19时的26条为全程最高，其后第22小时25条、第21小时22条形成高位平台，第30小时起基本归零，状态已平息。 [EVT-0012]",
+      "cited": [
+        "EVT-0012"
+      ],
+      "model_calls": 2,
+      "tool_calls": 1,
+      "prompt_tokens": 4995,
+      "completion_tokens": 216,
+      "latency_s": 2.8,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": false
+      }
+    },
+    {
+      "id": "S1",
+      "type": "实例单跳",
+      "config": "fixed",
+      "question": "EVT-0012 的热度峰值出现在首帖后第几小时？峰值那一小时有多少条帖子？",
+      "run_id": "f7fa9bfbad04",
+      "status": "unstructured",
+      "answer": "现有资料无法确定。\n\n所给资料中只有热度计算口径（峰值小时定义、逐小时帖子数统计方法）、回落表述方式和分级标准 [MTH-001#02][MTH-001#01][MTH-009#02][STD-001#02]，没有提供 EVT-0012 的任何逐小时帖子数数据，因此无法计算其峰值小时出现在首帖后第几小时，也无法给出该小时的帖子数。",
+      "cited": [
+        "MTH-001",
+        "MTH-001#01",
+        "MTH-001#02",
+        "MTH-009",
+        "MTH-009#02",
+        "STD-001",
+        "STD-001#02"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 535,
+      "completion_tokens": 133,
+      "latency_s": 2.11,
+      "grade": {
+        "passed": false,
+        "missing": [
+          "第19小时",
+          "(?<!\\d)26条"
+        ],
+        "forbidden": [],
+        "evidence_ok": false,
+        "refused": true
+      }
+    },
+    {
+      "id": "S2",
+      "type": "实例单跳",
+      "config": "v0.1",
+      "question": "目前有哪些事件处于发酵中（rising）状态？",
+      "run_id": "9e221ce81c94",
+      "status": "answered",
+      "answer": "1. 当前仅有 1 个事件处于发酵中（rising）状态：EVT-0021「多家餐厅被指用预制菜冒充现炒」，主题为消费维权，等级 3 级，首帖时间 2026-10-11 07:05:53。 [EVT-0021]\n2. 该事件符合发酵中判定条件：峰值小时出现在第 65 小时（不早于第 48 小时），峰值小时帖子 33 条，72 小时共 320 条帖文。 [EVT-0021, STD-004#01]\n3. 热度仍在持续攀升：第 60–71 小时帖子 287 条，占 72 小时总量的 89.69%，逐小时帖子数从第 59 小时的 12 条升至第 65 小时的 33 条并维持高位。 [EVT-0021, STD-004#03]\n无法确定：\n- 无法确定该事件后续走向（是否转为回落中/已平息），需等第 72 小时后数据进一步观察。",
+      "cited": [
+        "EVT-0021",
+        "STD-004#01",
+        "STD-004#03"
+      ],
+      "model_calls": 4,
+      "tool_calls": 3,
+      "prompt_tokens": 11161,
+      "completion_tokens": 617,
+      "latency_s": 6.53,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": true
+      }
+    },
+    {
+      "id": "S2",
+      "type": "实例单跳",
+      "config": "fixed",
+      "question": "目前有哪些事件处于发酵中（rising）状态？",
+      "run_id": "7ceca96b4a99",
+      "status": "unstructured",
+      "answer": "现有资料无法确定。\n\n资料中只提供了「发酵中（rising）」状态的判定规则——峰值小时不早于第 48 小时 [STD-004#01]，以及先判断是否发酵中、再判断是否已平息的判定顺序 [STD-004#02]，但没有给出任何具体事件的逐小时帖子数或 events 表的 status 取值，因此无法列出当前处于发酵中状态的事件名单。",
+      "cited": [
+        "STD-004",
+        "STD-004#01",
+        "STD-004#02"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 484,
+      "completion_tokens": 123,
+      "latency_s": 2.27,
+      "grade": {
+        "passed": false,
+        "missing": [
+          "EVT-0021"
+        ],
+        "forbidden": [],
+        "evidence_ok": false,
+        "refused": true
+      }
+    },
+    {
+      "id": "S3",
+      "type": "实例单跳",
+      "config": "v0.1",
+      "question": "EVT-0003 的首帖是哪个账号发布的？",
+      "run_id": "04cf50d43631",
+      "status": "answered",
+      "answer": "1. EVT-0003（鹭港地铁4号线早高峰故障停运40分钟）的首帖为 P0003-0001，由账号 A01104 于 2026-09-05 09:32:53 在微博发布（负面，原帖，无被转发对象），与事件首帖时间一致。 [EVT-0003, P0003-0001]\n2. 首帖发布后短时间内出现的 P0003-0002（A00767）与 P0003-0003（A00166，媒体核实帖）均为对首帖/上游帖的转发，非原创首发。 [P0003-0002, P0003-0003]",
+      "cited": [
+        "EVT-0003",
+        "P0003-0001",
+        "P0003-0002",
+        "P0003-0003"
+      ],
+      "model_calls": 2,
+      "tool_calls": 2,
+      "prompt_tokens": 4626,
+      "completion_tokens": 443,
+      "latency_s": 3.41,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": false
+      }
+    },
+    {
+      "id": "S3",
+      "type": "实例单跳",
+      "config": "fixed",
+      "question": "EVT-0003 的首帖是哪个账号发布的？",
+      "run_id": "81b2e1de907f",
+      "status": "unstructured",
+      "answer": "现有资料无法确定 EVT-0003 的首帖发布账号。\n\n现有资料仅包含溯源方法（首帖指发布时间最早的帖子，发布首帖的账号为首发账号 [MTH-005#01]），但没有提供 EVT-0003 的具体帖子记录或账号信息，因此无法据此判定首发账号。",
+      "cited": [
+        "MTH-005",
+        "MTH-005#01"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 491,
+      "completion_tokens": 177,
+      "latency_s": 2.64,
+      "grade": {
+        "passed": false,
+        "missing": [
+          "A01104"
+        ],
+        "forbidden": [],
+        "evidence_ok": false,
+        "refused": true
+      }
+    },
+    {
+      "id": "M1",
+      "type": "实例多跳",
+      "config": "v0.1",
+      "question": "EVT-0003 是怎么扩散开的？首发账号和关键放大账号分别是谁？",
+      "run_id": "787873d549ae",
+      "status": "answered",
+      "answer": "1. 首发帖为 P0003-0001（2026-09-05 09:32:53，与事件 first_seen_at 一致），发布账号 A01104 即首发账号，属个人账号、内容为负面吐槽式首发。 [EVT-0003, P0003-0001, MTH-005]\n2. 扩散呈「小号首发、大号放大」形态：首帖后约 1.5 小时（11:02:53），认证媒体账号 A00166 以带话题 #地铁停运# 的形式转发核实（P0003-0003），此后转发链条从该帖展开。 [MTH-005#03, P0003-0003, P0003-0001]\n3. A00166 是可见的最大转发枢纽：其帖 P0003-0003 下至少引出 12 条直接转发（如 P0003-0004、P0003-0013、P0003-0015、P0003-0233 等），是本次事件的关键放大账号。 [P0003-0003, P0003-0004, P0003-0013, P0003-0015, STD-008#02]\n4. 整体节奏：首小时仅 2 帖，随放大节点出现逐步上升，第 6 小时达峰值 20 帖/小时，72 小时共 351 帖，末段（60–71 小时）仅 4 帖、占 1.14%，事件已平息。 [EVT-0003]\n5. 放大后的转发多为短评式跟随（如「必须严查」「转发」），情感以负面为主，未见明显谣言内容，属常规公共事件舆情扩散。 [P0003-0004, P0003-0011, P0003-0021, EVT-0003]\n无法确定：\n- 按 MTH-005 认定关键放大节点须同时满足认证、粉丝≥100 万、转发树占全部转发帖 50% 以上；本轮仅取得 A00166 帖的 12 条直接转发，未做递归计算，无法核实其转发树是否达 50% 占比（总转发帖约 266 条）。\n- 首发账号 A01104 的粉丝数、注册时间与认证状态未查到，无法量化说明「小号首发」的具体粉丝规模。\n- 是否有其他认证大号也构成放大节点（例如 P0003-0005、P0003-0006 等原发帖所在账号的粉丝量级）未经查证，可能遗漏并列放大节点。",
+      "cited": [
+        "EVT-0003",
+        "MTH-005",
+        "MTH-005#03",
+        "P0003-0001",
+        "P0003-0003",
+        "P0003-0004",
+        "P0003-0011",
+        "P0003-0013",
+        "P0003-0015",
+        "P0003-0021",
+        "STD-008#02"
+      ],
+      "model_calls": 5,
+      "tool_calls": 8,
+      "prompt_tokens": 23288,
+      "completion_tokens": 3392,
+      "latency_s": 22.06,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": true
+      }
+    },
+    {
+      "id": "M1",
+      "type": "实例多跳",
+      "config": "fixed",
+      "question": "EVT-0003 是怎么扩散开的？首发账号和关键放大账号分别是谁？",
+      "run_id": "3bf431d7cf86",
+      "status": "unstructured",
+      "answer": "现有资料无法确定 EVT-0003 的具体扩散过程，也无法确定其首发账号和关键放大账号。\n\n理由如下：\n\n1. 提供的资料中没有 EVT-0003 的任何事件记录；所有片段均为方法规范或其他事件的复盘（如 CASE-001 云澜市茶饮品牌异物视频、CASE-010 鹭港食品安全事件），不包含该事件的账号、时间线或传播数据。\n2. 资料中也没有可据以推断首发账号身份的信息，因此不能猜测具体账号。\n\n按照现有规范，这类研判应当做到：先按 MTH-005 找到首帖和首发账号 [STD-007#02#1]；再按 MTH-006 分析转发树、找出关键放大节点 [STD-007#02#2]；若首发账号粉丝很少、经大号转发后才大范围传播，报告须同时写明首发账号、关键放大节点以及放大节点转发距首帖的时间 [MTH-005#03]；不能只看首发账号而低估传播能力 [CASE-001#05]。此外，判定疑似协同转发须按 MTH-002，不能仅凭新注册账号出现就下结论 [STD-007#02#3]。\n\n如需完成 EVT-0003 的溯源，请补充该事件的首帖信息、转发关系数据及相关账号资料。",
+      "cited": [
+        "CASE-001",
+        "CASE-001#05",
+        "CASE-010",
+        "MTH-005",
+        "MTH-005#03",
+        "STD-007",
+        "STD-007#02"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 459,
+      "completion_tokens": 353,
+      "latency_s": 3.5,
+      "grade": {
+        "passed": false,
+        "missing": [
+          "A01104",
+          "A00166"
+        ],
+        "forbidden": [],
+        "evidence_ok": false,
+        "refused": true
+      }
+    },
+    {
+      "id": "M2",
+      "type": "实例多跳",
+      "config": "v0.1",
+      "question": "EVT-0015 的舆论情感前后有什么变化？请给出首帖后前 24 小时和第 36 小时以后各自的负面占比。",
+      "run_id": "509da3053994",
+      "status": "answered",
+      "answer": "1. 首帖后第 0–23 小时（前 24 小时）：帖子共 252 条，其中负面 197 条，负面占比 197/252≈78.2%，属高强度负面主导。 [EVT-0015, MTH-004#01, P0015-0001]\n2. 首帖后第 36 小时起至 72 小时：帖子共 83 条，其中负面仅 7 条，负面占比 7/83≈8.4%。 [EVT-0015, MTH-004#01, P0015-0330, P0015-0374]\n3. 按 MTH-004 口径（0–23 小时负面≥70%、36 小时起负面≤30%）判定，EVT-0015 构成情感反转，负面占比由约 78% 降至约 8%，且事件当前状态为 declining。 [MTH-004#02, EVT-0015]\n4. 第 36 小时后负面样本量很小（83 条中 7 条），占比易波动，引用时应一并说明样本量（与复盘经验一致）。 [CASE-004#04, EVT-0015]\n无法确定：\n- 未查到触发此次情感反转的具体官方回应/说明帖及其时间点（36 小时后出现的正面帖如 P0015-0257、P0015-0286 仅为用户表态）。\n- 工具调用次数已用完，未能核对 24–35 小时时段（65 条、其中负面 39 条≈60%）的完整情感分布与官方回应是否已开始起作用。",
+      "cited": [
+        "CASE-004#04",
+        "EVT-0015",
+        "MTH-004#01",
+        "MTH-004#02",
+        "P0015-0001",
+        "P0015-0330",
+        "P0015-0374"
+      ],
+      "model_calls": 5,
+      "tool_calls": 8,
+      "prompt_tokens": 29075,
+      "completion_tokens": 3128,
+      "latency_s": 18.47,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": true
+      }
+    },
+    {
+      "id": "M2",
+      "type": "实例多跳",
+      "config": "fixed",
+      "question": "EVT-0015 的舆论情感前后有什么变化？请给出首帖后前 24 小时和第 36 小时以后各自的负面占比。",
+      "run_id": "4aa3a06bdd3f",
+      "status": "unstructured",
+      "answer": "现有资料无法确定 EVT-0015 的情感变化数据。\n\n资料中只提供了「情感反转」的判定口径和槐南区案例的复盘，没有 EVT-0015 首帖后前 24 小时与第 36 小时以后的负面占比、帖子数等具体数据。\n\n可参照的口径是：判定情感反转需同时满足「首帖后第 0–23 小时负面占比不低于 70%」和「第 36 小时起负面占比不超过 30%」，报告中应写明两个时段各自的负面占比和帖子数，帖子数过少时还应说明样本量 [MTH-004#02][CASE-004#04]。但 EVT-0015 是否满足这些条件、两个时段的具体数值，现有资料无法确定。",
+      "cited": [
+        "CASE-004",
+        "CASE-004#04",
+        "MTH-004",
+        "MTH-004#02"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 537,
+      "completion_tokens": 258,
+      "latency_s": 2.91,
+      "grade": {
+        "passed": false,
+        "missing": [
+          "7[78](\\.\\d+)?%",
+          "(?<![\\d.])8(\\.\\d+)?%"
+        ],
+        "forbidden": [],
+        "evidence_ok": false,
+        "refused": true
+      }
+    },
+    {
+      "id": "M3",
+      "type": "实例多跳",
+      "config": "v0.1",
+      "question": "EVT-0007 有没有疑似协同转发？如果有，涉及多少个账号、转发的是哪条帖子？",
+      "run_id": "7cd3a59009b7",
+      "status": "answered",
+      "answer": "1. EVT-0007 存在疑似协同转发：2026-09-13 17:51:46–17:56:31 不到 5 分钟的时间里，至少 40 个账号以完全相同的正文「支持禾沐科技，别听信谣言，正常的业务调整而已。」转发同一条帖子，满足 MTH-002 的「10 分钟内至少 10 个新注册账号转发同一条帖子」判定标准。 [MTH-002#01, MTH-002#02, P0007-0027, P0007-0030, P0007-0034, P0007-0046, P0007-0061, P0007-0067]\n2. 集中转发的目标帖是被转发帖 P0007-0024，上述集中转发帖的 parent_post_id 全部指向该帖。 [P0007-0027, P0007-0032, P0007-0041, P0007-0055, P0007-0065]\n3. 辅助特征可用以佐证可信度：转发正文完全一致，且参与账号编号集中在 A01504–A01543 连续区间，符合 MTH-002 所列「正文相同」「注册时间集中在同几天」的辅助特征（后者需注册时间核实）。 [MTH-002#02, P0007-0028, P0007-0039, P0007-0058, P0007-0063]\n4. 该集中转发是事件峰值的主要构成：事件第 8 小时发帖 51 条、其中转发 48 条，明显高于其余小时（多在 15 条以下），第 60–71 小时仅 1 条，事件已回落（status=subsided）。 [EVT-0007, MTH-002#03]\n无法确定：\n- 参与集中转发的账号注册时间未能核实，无法逐个确认是否均为「发帖时注册不足 7 天」的新注册账号（MTH-003 定义）。\n- 参与账号的粉丝数未查得，无法核实「粉丝数普遍不足 50」这一辅助特征。\n- 该批集中转发的准确账号总数未能完全统计（小时 8–9 共 64 条转发，本轮仅取到前 50 条），已知同一被转发帖 P0007-0024 的集中转发至少 40 个账号。",
+      "cited": [
+        "EVT-0007",
+        "MTH-002#01",
+        "MTH-002#02",
+        "MTH-002#03",
+        "P0007-0027",
+        "P0007-0028",
+        "P0007-0030",
+        "P0007-0032",
+        "P0007-0034",
+        "P0007-0039",
+        "P0007-0041",
+        "P0007-0046",
+        "P0007-0055",
+        "P0007-0058",
+        "P0007-0061",
+        "P0007-0063",
+        "P0007-0065",
+        "P0007-0067"
+      ],
+      "model_calls": 6,
+      "tool_calls": 8,
+      "prompt_tokens": 46363,
+      "completion_tokens": 2540,
+      "latency_s": 18.36,
+      "grade": {
+        "passed": false,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": false,
+        "refused": true
+      }
+    },
+    {
+      "id": "M3",
+      "type": "实例多跳",
+      "config": "fixed",
+      "question": "EVT-0007 有没有疑似协同转发？如果有，涉及多少个账号、转发的是哪条帖子？",
+      "run_id": "7316be5add59",
+      "status": "unstructured",
+      "answer": "现有资料无法确定。\n\n给出的资料只包含处置规范和疑似协同转发的判定方法，没有 EVT-0007 的转发帖、账号注册时间或转发时间分布等具体数据，因此无法判断该事件是否存在疑似协同转发，也无法给出涉及账号数和被转发帖。\n\n按资料规定，判定「疑似协同转发」须同时满足：至少 10 个新注册账号转发了同一条帖子，且这些转发发生在任意 10 分钟的时间段之内 [MTH-002#01]；核查时需取全部转发帖，关联账号注册时间，筛选发帖时注册不足 7 天的账号，并按被转发帖分组计算任意 10 分钟窗口内的账号数 [MTH-002#04]。同时不能仅凭新注册账号出现就下结论 [STD-007#02]，若转发分散在数小时内、任意 10 分钟不超过 2 个或转发的是不同帖子，则不判定为协同转发 [MTH-002#03]。上述数据在现有资料中均缺失。",
+      "cited": [
+        "MTH-002",
+        "MTH-002#01",
+        "MTH-002#03",
+        "MTH-002#04",
+        "STD-007",
+        "STD-007#02"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 497,
+      "completion_tokens": 270,
+      "latency_s": 2.98,
+      "grade": {
+        "passed": false,
+        "missing": [
+          "(?<!\\d)40个",
+          "P0007-0024"
+        ],
+        "forbidden": [],
+        "evidence_ok": false,
+        "refused": true
+      }
+    },
+    {
+      "id": "R1",
+      "type": "应拒答",
+      "config": "v0.1",
+      "question": "EVT-0003 的责任单位是哪家公司？",
+      "run_id": "900536cf2e66",
+      "status": "answered",
+      "answer": "1. 现有资料无法确定 EVT-0003 的责任单位：业务库只记录事件、帖子和账号，没有「责任单位」字段，规范中明确要求此类问题回答无法确定（STD-010#03）。 [STD-010#03, STD-010]\n2. 事件本身可确认：EVT-0003 为「鹭港地铁4号线早高峰故障停运40分钟」，主题公共交通，等级2，状态已平息（subsided），首帖时间 2026-09-05 09:32:53。 [EVT-0003]\n3. 检索该事件全部 351 条帖子中前 20 条，正文只提及「鹭港地铁4号线」和「相关部门」，未出现任何具体运营公司名称。 [P0003-0001, P0003-0005, P0003-0017]\n无法确定：\n- EVT-0003 的责任单位／运营公司具体名称：业务库无该字段，文档也未提及，无法确定。\n- 事件是否有官方回应及回应主体（帖子仅提到「还没看到官方回应」），现有资料无法确认。",
+      "cited": [
+        "EVT-0003",
+        "P0003-0001",
+        "P0003-0005",
+        "P0003-0017",
+        "STD-010",
+        "STD-010#03"
+      ],
+      "model_calls": 4,
+      "tool_calls": 5,
+      "prompt_tokens": 13138,
+      "completion_tokens": 745,
+      "latency_s": 8.17,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": true
+      }
+    },
+    {
+      "id": "R1",
+      "type": "应拒答",
+      "config": "fixed",
+      "question": "EVT-0003 的责任单位是哪家公司？",
+      "run_id": "3e8e51fc408a",
+      "status": "unstructured",
+      "answer": "现有资料无法确定 EVT-0003 的责任单位；业务库只记录事件、帖子和账号，不记录责任单位，相关文档也未提及 [STD-010#03]。",
+      "cited": [
+        "STD-010",
+        "STD-010#03"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 426,
+      "completion_tokens": 203,
+      "latency_s": 2.2,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": true
+      }
+    },
+    {
+      "id": "R2",
+      "type": "应拒答",
+      "config": "v0.1",
+      "question": "EVT-0021 在首帖 5 天之后的热度怎么样？",
+      "run_id": "0801af185df5",
+      "status": "answered",
+      "answer": "1. EVT-0021 可核实的统计窗口只到首帖后第72小时，首帖5天后已超出该窗口，无法判断其实际热度。 [EVT-0021, MTH-001#01, STD-001#03]\n2. 截至72小时窗口，EVT-0021 为三级事件、状态为发酵中：72小时总帖320条，峰值出现在第65小时、33条，峰值不早于第48小时。 [EVT-0021, STD-004#01, MTH-001#02]\n3. 窗口末端热度仍处高位：第60–71小时共287条，占72小时总量的89.69%，第69–71小时仍分别有28、27、23条，未见回落。 [EVT-0021, STD-004#03, MTH-001#03]\n无法确定：\n- EVT-0021 首帖5天后（约第120小时）的逐小时帖子数、峰值和事件状态，业务数据只保留首帖后72小时，无法确定。\n- 无法确认第72小时之后热度是继续上升还是转为回落。",
+      "cited": [
+        "EVT-0021",
+        "MTH-001#01",
+        "MTH-001#02",
+        "MTH-001#03",
+        "STD-001#03",
+        "STD-004#01",
+        "STD-004#03"
+      ],
+      "model_calls": 4,
+      "tool_calls": 6,
+      "prompt_tokens": 20536,
+      "completion_tokens": 1960,
+      "latency_s": 17.88,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": true
+      }
+    },
+    {
+      "id": "R2",
+      "type": "应拒答",
+      "config": "fixed",
+      "question": "EVT-0021 在首帖 5 天之后的热度怎么样？",
+      "run_id": "5d31b7d797bd",
+      "status": "unstructured",
+      "answer": "现有资料无法确定。\n\n原因有两点：第一，所给资料中没有 EVT-0021 的任何具体数据，例如逐小时帖子数、峰值小时、72 小时帖子总数等，无法据此判断该事件在首帖 5 天后的热度。[STD-004#01] [MTH-001#01]\n\n第二，即便有数据，「热度」的计算标准也只把首帖后 72 小时（第 0–71 小时）划为统计范围；首帖 5 天（约 120 小时）之后已经超出这个范围，资料也没有给出该时段的热度计算或状态判定方法。[MTH-001#01] [STD-004#01]",
+      "cited": [
+        "MTH-001",
+        "MTH-001#01",
+        "STD-004",
+        "STD-004#01"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 599,
+      "completion_tokens": 266,
+      "latency_s": 2.83,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": true
+      }
+    },
+    {
+      "id": "R3",
+      "type": "应拒答",
+      "config": "v0.1",
+      "question": "禾沐科技裁员事件（EVT-0007）中，公司一共裁了多少名员工？",
+      "run_id": "25d6e886ab5b",
+      "status": "answered",
+      "answer": "1. 现有资料无法确定禾沐科技裁员事件（EVT-0007）的具体裁员人数：以「裁员」「人」「员工」为关键词检索该事件帖子（分别返回 118、36、0 条），全部未出现任何具体裁员人数。 [EVT-0007, P0007-0001, P0007-0074, P0007-0123]\n2. 业务库仅记录事件、帖子、账号和逐小时指标，不记录官方回应内容等企业口径信息，因此裁员规模没有可核实的数据来源。 [MTH-010#04, MTH-010#02]\n3. 按规范，此类问题应直接说明「现有资料无法确定」并说明缺少的信息，不得依据常识或类似事件推测具体数字；该事件首帖后 72 小时共 340 条帖子的热度数据也只有帖子量、转发量、账号数，不含人数口径。 [STD-010, MTH-010#03, STD-005#02]\n无法确定：\n- 禾沐科技实际裁员人数（公司公告或官方回应中的数字）在文档和业务库中均未记录\n- 裁员涉及的时间范围、部门分布等信息同样缺失，无法从帖子文本推断\n- 事件等级（三级）与处置结论的官方依据未在资料中说明",
+      "cited": [
+        "EVT-0007",
+        "MTH-010#02",
+        "MTH-010#03",
+        "MTH-010#04",
+        "P0007-0001",
+        "P0007-0074",
+        "P0007-0123",
+        "STD-005#02",
+        "STD-010"
+      ],
+      "model_calls": 5,
+      "tool_calls": 8,
+      "prompt_tokens": 37546,
+      "completion_tokens": 1217,
+      "latency_s": 11.44,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": true
+      }
+    },
+    {
+      "id": "R3",
+      "type": "应拒答",
+      "config": "fixed",
+      "question": "禾沐科技裁员事件（EVT-0007）中，公司一共裁了多少名员工？",
+      "run_id": "92ce908a9c3b",
+      "status": "unstructured",
+      "answer": "现有资料无法确定禾沐科技裁员事件（EVT-0007）的裁员人数。\n\n提供的资料中没有关于该事件的任何记录，也没有裁员规模的相关数据。参照资料不足时的处理要求，业务库只记录传播类数据，不记录裁员人数，相关文档也未提及 [STD-010#03]；资料不足时，直接说明无法确定以及缺少什么，比给出一个没有来源的数字更有用 [CASE-018#04]。",
+      "cited": [
+        "CASE-018",
+        "CASE-018#04",
+        "STD-010",
+        "STD-010#03"
+      ],
+      "model_calls": 1,
+      "tool_calls": 0,
+      "prompt_tokens": 423,
+      "completion_tokens": 207,
+      "latency_s": 2.42,
+      "grade": {
+        "passed": true,
+        "missing": [],
+        "forbidden": [],
+        "evidence_ok": true,
+        "refused": true
+      }
+    }
+  ]
+}
