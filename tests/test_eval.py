@@ -96,8 +96,9 @@ class GradingTest(unittest.TestCase):
         self.assertTrue(grade(self.q["K1"], "二级事件当天上报", ["STD-002#01"]).passed)
 
     def test_m2_does_not_confuse_78_with_8(self) -> None:
-        self.assertFalse(grade(self.q["M2"], "前 24 小时负面 78%", ["EVT-0015"]).passed)
-        self.assertTrue(grade(self.q["M2"], "前 24 小时负面 78.2%，36 小时后 8.4%", ["EVT-0015"]).passed)
+        self.assertFalse(grade(self.q["M2"], "前 24 小时负面 77.8%", ["EVT-0015"]).passed)
+        self.assertFalse(grade(self.q["M2"], "前 24 小时负面 77.8%，36 小时后 110%", ["EVT-0015"]).passed)
+        self.assertTrue(grade(self.q["M2"], "前 24 小时负面 77.8%，36 小时后 10.8%", ["EVT-0015"]).passed)
 
     def test_refusals(self) -> None:
         self.assertTrue(grade(self.q["R1"], "现有资料无法确定责任单位", []).passed)

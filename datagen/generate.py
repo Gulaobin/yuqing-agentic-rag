@@ -42,6 +42,7 @@ def generate(seed: int, out_dir: Path) -> Result:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     accounts = make_base_accounts(random.Random(f"{seed}:accounts"))
+    accounts += make_background_accounts(random.Random(f"{seed}:background"))
     specials = plants.special_accounts()
     pools = build_pools(accounts)
 
@@ -121,15 +122,41 @@ def make_base_accounts(rng: random.Random) -> list[Account]:
     return accounts
 
 
+def make_background_accounts(rng: random.Random) -> list[Account]:
+    """事件期间正常注册的账号：粉丝少、很少认证，注册后才会被选为发帖人。"""
+    platforms = list(C.ACCOUNT_PLATFORM_WEIGHTS)
+    weights = [C.ACCOUNT_PLATFORM_WEIGHTS[p] for p in platforms]
+    accounts = []
+    for i in range(C.N_BACKGROUND_ACCOUNTS):
+        accounts.append(
+            Account(
+                key=f"bg-{i:04d}",
+                platform=rng.choices(platforms, weights=weights)[0],
+                created_at=random_time(rng, C.BACKGROUND_CREATED_FROM, C.BACKGROUND_CREATED_UNTIL),
+                followers=int(rng.lognormvariate(math.log(60), 1.3)),
+                verified=rng.random() < 0.01,
+                activity=rng.lognormvariate(0.0, 1.0),
+            )
+        )
+    return accounts
+
+
 class Pool:
-    """某平台的随机发帖人池，按 activity 加权抽样。"""
+    """某平台的随机发帖人池，按 activity 加权抽样；只会选到发帖时已经注册的账号。"""
+
+    MAX_TRIES = 20
 
     def __init__(self, accounts: list[Account]):
         self.accounts = accounts
         self.cum = list(accumulate(a.activity for a in accounts))
 
-    def pick(self, rng: random.Random) -> Account:
-        return self.accounts[bisect.bisect_right(self.cum, rng.random() * self.cum[-1])]
+    def pick(self, rng: random.Random, before: datetime) -> Account:
+        for _ in range(self.MAX_TRIES):
+            account = self.accounts[bisect.bisect_right(self.cum, rng.random() * self.cum[-1])]
+            if account.created_at < before:
+                return account
+        # 连续抽到尚未注册的账号时，退回到池中第一个已注册的账号（确定性的兜底）
+        return next(a for a in self.accounts if a.created_at < before)
 
 
 def build_pools(accounts: list[Account]) -> dict[str, Pool]:
@@ -255,7 +282,7 @@ def simulate_event(
                 platform = account.platform
             else:
                 platform = pick_weighted(rng, scheduled(profile.platform_schedule, hour))
-                account = pools[platform].pick(rng)
+                account = pools[platform].pick(rng, created_at)
             if i > 0 and rng.random() >= profile.original_prob:
                 parent = choose_parent(rng, by_platform[platform], received, subtree, boost)
             if parent is None:
