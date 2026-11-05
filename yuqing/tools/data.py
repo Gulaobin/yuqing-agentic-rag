@@ -15,6 +15,7 @@ from ..core.tools import Tool
 
 TOPICS = ["食品安全", "消费维权", "公共交通", "教育", "医疗", "环境", "企业经营", "网络谣言", "文旅", "城市管理"]
 PLATFORMS = ["weibo", "douyin", "xiaohongshu", "news"]
+TEXT_LIMIT = 80  # query_posts 返回的正文最多字符数，避免一次塞进几十条全文
 HOUR_SQL = "(CAST(strftime('%s', p.created_at) AS INTEGER) - CAST(strftime('%s', e.first_seen_at) AS INTEGER)) / 3600"
 
 
@@ -83,8 +84,50 @@ class BusinessDB:
                 f"ORDER BY p.created_at {order}, p.post_id {order} LIMIT ?",
                 [*params, args["limit"]],
             ).fetchall()
+        posts = []
+        for row in rows:
+            post = dict(row)
+            if len(post["text"]) > TEXT_LIMIT:
+                post["text"] = post["text"][:TEXT_LIMIT] + "…"
+            posts.append(post)
         return {"event_id": event["event_id"], "first_seen_at": event["first_seen_at"], "total": total,
-                "returned": len(rows), "posts": [dict(r) for r in rows]}
+                "returned": len(rows), "posts": posts}
+
+    def get_metrics(self, args: dict[str, Any]) -> dict[str, Any]:
+        hour_from, hour_to = args["hour_from"], args["hour_to"]
+        if hour_from > hour_to:
+            raise ValueError(f"hour_from（{hour_from}）不能大于 hour_to（{hour_to}）")
+        with self.connect() as conn:
+            event = conn.execute(
+                "SELECT event_id, level, status, first_seen_at FROM events WHERE event_id = ?", (args["event_id"],)
+            ).fetchone()
+            if event is None:
+                raise ValueError(f"事件 {args['event_id']} 不存在")
+            rows = conn.execute(
+                "SELECT hour, post_count, repost_count, unique_accounts FROM metrics_hourly "
+                "WHERE event_id = ? ORDER BY hour",
+                (args["event_id"],),
+            ).fetchall()
+        counts = [r["post_count"] for r in rows]
+        total = sum(counts)
+        peak = max(range(len(counts)), key=lambda h: (counts[h], -h))  # 并列取最早，与 MTH-001 一致
+        last_12h = sum(counts[60:72])
+        return {
+            "event_id": event["event_id"],
+            "first_seen_at": event["first_seen_at"],
+            "level": event["level"],
+            "status": event["status"],
+            "summary": {  # 始终按完整 72 小时计算
+                "total_posts_72h": total,
+                "peak_hour": peak,
+                "peak_posts": counts[peak],
+                "posts_hour_60_71": last_12h,
+                "share_hour_60_71": round(last_12h / total, 4) if total else 0.0,
+            },
+            "columns": ["hour", "post_count", "repost_count", "unique_accounts"],
+            "hourly": [[r["hour"], r["post_count"], r["repost_count"], r["unique_accounts"]]
+                       for r in rows if hour_from <= r["hour"] <= hour_to],
+        }
 
 
 def data_tools(db: BusinessDB) -> list[Tool]:
@@ -130,5 +173,22 @@ def data_tools(db: BusinessDB) -> list[Tool]:
                 "additionalProperties": False,
             },
             handler=db.query_posts,
+        ),
+        Tool(
+            name="get_metrics",
+            description="查询某个事件的逐小时指标：每小时帖子数（含转发）、转发数、去重账号数，以及 72 小时汇总"
+                        "（总帖数、峰值小时及帖子数、第 60–71 小时帖子数与占比）、等级和状态。"
+                        "统计数量、看热度变化时用它，不要用 query_posts 逐段计数。",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "event_id": event_id,
+                    "hour_from": {"type": "integer", "minimum": 0, "maximum": 71, "default": 0},
+                    "hour_to": {"type": "integer", "minimum": 0, "maximum": 71, "default": 71},
+                },
+                "required": ["event_id"],
+                "additionalProperties": False,
+            },
+            handler=db.get_metrics,
         ),
     ]
