@@ -103,7 +103,7 @@ python -m yuqing.core.smoke
 
 | 配置 | 工具 | 预算（模型 / 工具） | 说明 |
 |---|---|---|---|
-| `v0.1` | search_docs、read_doc、query_events、query_posts | 10 / 8 | 自主检索，模型以 `submit_answer` 提交结构化回答 |
+| `v0.1` | search_docs、read_doc、query_events、query_posts、get_metrics | 10 / 8 | 自主检索，模型以 `submit_answer` 提交结构化回答 |
 | `fixed` | 无 | 1 / 0 | 代码按问题检索 5 个片段、模型生成一次，只用作评测对照 |
 
 ```bash

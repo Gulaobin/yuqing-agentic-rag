@@ -22,7 +22,7 @@ class RunConfig:
 PRESETS: dict[str, RunConfig] = {
     "v0.1": RunConfig(
         name="v0.1",
-        tools=("search_docs", "read_doc", "query_events", "query_posts"),
+        tools=("search_docs", "read_doc", "query_events", "query_posts", "get_metrics"),
         max_model_calls=10,
         max_tool_calls=8,
         retrieval="agentic",

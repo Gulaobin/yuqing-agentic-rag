@@ -256,6 +256,34 @@ class DataToolsTest(AgentTestBase):
             with self.db.connect() as conn:
                 conn.execute("DELETE FROM posts")
 
+    def test_get_metrics_summary_matches_generator_rules(self) -> None:
+        """汇总按完整 72 小时计算，峰值与状态规则和数据生成器一致。"""
+        for event_id in ("EVT-0012", "EVT-0021", "EVT-0001"):
+            with self.subTest(event_id):
+                data = self.run_tool("get_metrics", {"event_id": event_id})
+                counts = [row[1] for row in data["hourly"]]
+                self.assertEqual(len(counts), 72)
+                summary = data["summary"]
+                self.assertEqual(summary["total_posts_72h"], sum(counts))
+                self.assertEqual(C.status_for(counts), data["status"])
+                self.assertEqual(C.level_for(sum(counts)), data["level"])
+                self.assertEqual(counts[summary["peak_hour"]], max(counts))
+                self.assertEqual(summary["peak_hour"], counts.index(max(counts)))  # 并列取最早
+        rising = self.run_tool("get_metrics", {"event_id": "EVT-0021"})["summary"]
+        self.assertGreaterEqual(rising["peak_hour"], C.RISING_PEAK_HOUR)
+
+    def test_get_metrics_range_filters_rows_not_summary(self) -> None:
+        full = self.run_tool("get_metrics", {"event_id": "EVT-0007"})
+        part = self.run_tool("get_metrics", {"event_id": "EVT-0007", "hour_from": 8, "hour_to": 14})
+        self.assertEqual([row[0] for row in part["hourly"]], list(range(8, 15)))
+        self.assertEqual(part["summary"], full["summary"])
+        result = Toolbox(data_tools(self.db)).run("get_metrics", '{"event_id": "EVT-0007", "hour_from": 9, "hour_to": 3}')
+        self.assertEqual(result.error, "handler_error")
+
+    def test_query_posts_truncates_long_text(self) -> None:
+        posts = self.run_tool("query_posts", {"event_id": "EVT-0003", "limit": 50})["posts"]
+        self.assertTrue(all(len(p["text"]) <= 81 for p in posts))
+
     def test_unknown_event_is_reported(self) -> None:
         result = Toolbox(data_tools(self.db)).run("query_posts", '{"event_id": "EVT-0999"}')
         self.assertEqual(result.error, "handler_error")
