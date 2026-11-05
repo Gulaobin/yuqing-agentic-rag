@@ -18,7 +18,7 @@ from .model import Account, Event, EventProfile, ForcedPost, Post
 
 PLANTS: tuple[dict, ...] = (
     {"plant_id": "P-001", "kind": "coordinated_repost", "event_ids": ["EVT-0007"],
-     "description": "40 个注册不足 7 天的账号在 5 分钟内转发同一条帖子，正文完全相同"},
+     "description": "40 个注册不足 7 天的账号在 5 分钟内转发同一条帖子，正文完全相同；全库只有这一组满足协同转发判定"},
     {"plant_id": "P-002", "kind": "decay_after", "event_ids": ["EVT-0012"],
      "description": "峰值出现在第 30 小时之前，第 30 小时起每小时帖数不超过峰值的 20%"},
     {"plant_id": "P-003", "kind": "first_poster_amplified", "event_ids": ["EVT-0003"],
@@ -30,7 +30,7 @@ PLANTS: tuple[dict, ...] = (
     {"plant_id": "P-006", "kind": "platform_migration", "event_ids": ["EVT-0009"],
      "description": "前 12 小时小红书帖子占比 >= 80%，第 24 小时起微博帖子占比 >= 70%"},
     {"plant_id": "P-007", "kind": "dispersed_new_accounts", "event_ids": ["EVT-0018"],
-     "description": "12 个注册不足 7 天的账号参与转发，但时间分散，任意 10 分钟内不超过 2 个；用于检验不误判协同转发"},
+     "description": "额外埋入 12 个注册不足 7 天的账号分散转发，任意 10 分钟内同一帖子的新号转发不超过 2 个；用于检验不误判协同转发"},
     {"plant_id": "P-008", "kind": "serial_first_poster", "event_ids": ["EVT-0005", "EVT-0011", "EVT-0024"],
      "description": "同一个账号是这三个事件的首发账号，且不是其他任何事件的首发账号"},
 )
@@ -76,7 +76,7 @@ def customize(profile: EventProfile) -> None:
     elif eid == "EVT-0009":
         profile.volume, profile.peak_hour, profile.rise_sigma, profile.decay_tau = 300, 14, 5, 16
         profile.platform_schedule = [
-            (0, {"xiaohongshu": 0.90, "weibo": 0.06, "douyin": 0.04}),
+            (0, {"xiaohongshu": 0.95, "weibo": 0.03, "douyin": 0.02}),  # 样本只有约 50 条，留足余量
             (12, {"xiaohongshu": 0.45, "weibo": 0.45, "douyin": 0.10}),
             (24, {"weibo": 0.85, "xiaohongshu": 0.08, "douyin": 0.05, "news": 0.02}),
         ]
@@ -190,26 +190,57 @@ def _first_poster(conn: sqlite3.Connection, event_id: str) -> tuple[str, str]:
     ).fetchone()
 
 
+def _windows(rows: list[tuple]) -> dict[tuple[str, str], list[tuple]]:
+    """新号转发按 (事件, 被转发帖) 分组，返回每组内 10 分钟窗口里转发最多的那批记录。"""
+    groups: dict[tuple[str, str], list[tuple]] = {}
+    for row in rows:
+        groups.setdefault((row[0], row[5]), []).append(row)
+    window = timedelta(minutes=C.COORDINATION_WINDOW_MINUTES)
+    best: dict[tuple[str, str], list[tuple]] = {}
+    for key, items in groups.items():
+        items.sort(key=lambda r: (r[2], r[1]))
+        left, top = 0, (0, 0)
+        for right in range(len(items)):
+            while _t(items[right][2]) - _t(items[left][2]) >= window:
+                left += 1
+            if right - left + 1 > top[1] - top[0]:
+                top = (left, right + 1)
+        best[key] = items[top[0]:top[1]]
+    return best
+
+
+def coordinated_groups(conn: sqlite3.Connection) -> dict[tuple[str, str], list[tuple]]:
+    """全库满足疑似协同转发判定的分组（与 MTH-002 一致）。"""
+    return {k: v for k, v in _windows(_new_account_reposts(conn)).items()
+            if len({r[3] for r in v}) >= C.COORDINATION_MIN_ACCOUNTS}
+
+
 def verify_coordinated(conn: sqlite3.Connection) -> tuple[bool, dict, list[str]]:
-    rows = _new_account_reposts(conn, "EVT-0007")
-    times = [_t(r[2]) for r in rows]
-    parents = sorted({r[5] for r in rows})
-    texts = sorted({r[6] for r in rows})
-    accounts = sorted({r[3] for r in rows})
+    groups = coordinated_groups(conn)
+    keys = sorted(groups)
+    members = groups.get(keys[0], []) if len(keys) == 1 else []
+    times = [_t(r[2]) for r in members]
+    accounts = sorted({r[3] for r in members})
+    texts = sorted({r[6] for r in members})
     ok = (
-        len(accounts) == 40
-        and len(parents) == 1
+        len(keys) == 1
+        and keys[0][0] == "EVT-0007"
+        and len(accounts) == 40
         and len(texts) == 1
         and (max(times) - min(times)).total_seconds() < 300
     )
+    all_new = _new_account_reposts(conn)
     facts = {
-        "target_post_id": parents[0] if parents else None,
+        "coordinated_groups": [list(k) for k in keys],
+        "target_post_id": keys[0][1] if len(keys) == 1 else None,
         "new_account_count": len(accounts),
         "window_start": min(times).strftime(C.TIME_FMT) if times else None,
         "window_end": max(times).strftime(C.TIME_FMT) if times else None,
-        "text": texts[0] if texts else None,
+        "text": texts[0] if len(texts) == 1 else None,
+        "events_with_new_account_reposts": len({r[0] for r in all_new}),
+        "new_account_reposts_total": len(all_new),
     }
-    return ok, facts, parents + accounts
+    return ok, facts, ([keys[0][1]] if len(keys) == 1 else []) + accounts
 
 
 def verify_decay(conn: sqlite3.Connection) -> tuple[bool, dict, list[str]]:
@@ -296,17 +327,11 @@ def verify_migration(conn: sqlite3.Connection) -> tuple[bool, dict, list[str]]:
 
 def verify_dispersed(conn: sqlite3.Connection) -> tuple[bool, dict, list[str]]:
     rows = _new_account_reposts(conn, "EVT-0018")
-    times = sorted(_t(r[2]) for r in rows)
-    max_in_10min, left = 0, 0
-    for right in range(len(times)):
-        while times[right] - times[left] >= timedelta(minutes=10):
-            left += 1
-        max_in_10min = max(max_in_10min, right - left + 1)
-    events_with_new = sorted({r[0] for r in _new_account_reposts(conn)})
+    windows = {k: v for k, v in _windows(rows).items()}
+    max_same_parent = max((len({r[3] for r in v}) for v in windows.values()), default=0)
     accounts = sorted({r[3] for r in rows})
-    ok = len(accounts) == 12 and max_in_10min <= 2 and events_with_new == ["EVT-0007", "EVT-0018"]
-    facts = {"new_account_count": len(accounts), "max_new_account_reposts_in_10min": max_in_10min,
-             "events_with_new_account_reposts": events_with_new}
+    ok = len(accounts) >= 12 and max_same_parent <= 2
+    facts = {"new_account_count": len(accounts), "max_new_accounts_same_post_10min": max_same_parent}
     return ok, facts, accounts
 
 

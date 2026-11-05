@@ -93,6 +93,19 @@ class BusinessDB:
         return {"event_id": event["event_id"], "first_seen_at": event["first_seen_at"], "total": total,
                 "returned": len(rows), "posts": posts}
 
+    def query_accounts(self, args: dict[str, Any]) -> dict[str, Any]:
+        ids = list(dict.fromkeys(args["account_ids"]))  # 去重并保持顺序
+        placeholders = ",".join("?" * len(ids))
+        with self.connect() as conn:
+            rows = conn.execute(
+                f"SELECT account_id, platform, created_at, followers, verified FROM accounts "
+                f"WHERE account_id IN ({placeholders}) ORDER BY account_id",
+                ids,
+            ).fetchall()
+        found = {r["account_id"] for r in rows}
+        return {"returned": len(rows), "accounts": [dict(r) for r in rows],
+                "not_found": [i for i in ids if i not in found]}
+
     def get_metrics(self, args: dict[str, Any]) -> dict[str, Any]:
         hour_from, hour_to = args["hour_from"], args["hour_to"]
         if hour_from > hour_to:
@@ -152,8 +165,8 @@ def data_tools(db: BusinessDB) -> list[Tool]:
         ),
         Tool(
             name="query_posts",
-            description="查询某个事件的帖子：编号、发帖账号、平台、发布时间、距首帖的小时数（hour）、情感、被转发帖编号、正文。"
-                        "返回 total（符合条件的总数）和按时间排序的前 limit 条。",
+            description="查询某个事件的帖子：编号、发帖账号、平台、发布时间、距首帖的小时数（hour）、情感、被转发帖编号、"
+                        "正文（截断）。返回 total（符合条件的总数）和按时间排序的前 limit 条。",
             parameters={
                 "type": "object",
                 "properties": {
@@ -173,6 +186,20 @@ def data_tools(db: BusinessDB) -> list[Tool]:
                 "additionalProperties": False,
             },
             handler=db.query_posts,
+        ),
+        Tool(
+            name="query_accounts",
+            description="按账号编号批量查询账号信息：平台、注册时间、粉丝数、是否认证（1 为认证）。一次最多 50 个。",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "account_ids": {"type": "array", "minItems": 1, "maxItems": 50,
+                                    "items": {"type": "string", "pattern": "^A\\d{5}$"}},
+                },
+                "required": ["account_ids"],
+                "additionalProperties": False,
+            },
+            handler=db.query_accounts,
         ),
         Tool(
             name="get_metrics",

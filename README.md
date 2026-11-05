@@ -104,6 +104,7 @@ python -m yuqing.core.smoke
 | 配置 | 工具 | 预算（模型 / 工具） | 说明 |
 |---|---|---|---|
 | `v0.1` | search_docs、read_doc、query_events、query_posts、get_metrics | 10 / 8 | 自主检索，模型以 `submit_answer` 提交结构化回答 |
+| `v0.2` | v0.1 + query_accounts | 10 / 8 | 可查账号注册时间、粉丝数、认证状态 |
 | `fixed` | 无 | 1 / 0 | 代码按问题检索 5 个片段、模型生成一次，只用作评测对照 |
 
 ```bash
@@ -139,7 +140,7 @@ python -m yuqing.api            # 浏览器打开 http://127.0.0.1:8000
 `eval/questions.json`：5 类各 3 题（知识单点、知识跨文档、实例单跳、实例多跳、应拒答）。规则判分：必需内容按正则匹配、引用的证据编号要包含指定文档或记录、应拒答题要明确表示无法确定。实例题的标准答案来自数据生成器埋入的规律，`tests/test_eval.py` 会与生成数据核对。
 
 ```bash
-python -m yuqing.evaluation.run                  # v0.1 与 fixed 各跑 15 题，约 5 分钟
+python -m yuqing.evaluation.run --configs v0.1,v0.2 --label v0.2-step1   # 同一套题对比两个配置
 python -m yuqing.evaluation.run --only S1,M3     # 只跑部分题
 ```
 

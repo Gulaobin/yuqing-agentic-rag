@@ -50,23 +50,38 @@ class GeneratedDataTest(unittest.TestCase):
         self.assertEqual(len(self.result.manifest["plants"]), 8)
 
     def test_coordinated_repost_by_plain_sql(self) -> None:
-        """不经过 plants.py，直接用 SQL 数「注册不足 7 天的账号转发」，结果应恰好只在两个事件里出现。"""
+        """不经过 plants.py，直接用 SQL 按 MTH-002 判定：全库只有一组新号转发满足「10 分钟内至少 10 个」。"""
         rows = self.conn.execute(
             """
-            SELECT p.event_id, COUNT(DISTINCT p.account_id),
-                   (MAX(julianday(p.created_at)) - MIN(julianday(p.created_at))) * 86400
-            FROM posts p JOIN accounts a ON a.account_id = p.account_id
-            WHERE p.parent_post_id IS NOT NULL
-              AND julianday(p.created_at) - julianday(a.created_at) < 7
-            GROUP BY p.event_id ORDER BY p.event_id
+            WITH n AS (
+                SELECT p.event_id, p.post_id, p.parent_post_id, p.account_id, julianday(p.created_at) AS t
+                FROM posts p JOIN accounts a ON a.account_id = p.account_id
+                WHERE p.parent_post_id IS NOT NULL AND julianday(p.created_at) - julianday(a.created_at) < 7
+            )
+            SELECT event_id, parent_post_id, MAX(cnt) FROM (
+                SELECT x.event_id, x.parent_post_id,
+                       (SELECT COUNT(DISTINCT y.account_id) FROM n y
+                        WHERE y.parent_post_id = x.parent_post_id AND y.t >= x.t AND y.t < x.t + 10.0 / 1440) AS cnt
+                FROM n x
+            ) GROUP BY event_id, parent_post_id HAVING MAX(cnt) >= 10
             """
         ).fetchall()
-        by_event = {r[0]: (r[1], r[2]) for r in rows}
-        self.assertEqual(sorted(by_event), ["EVT-0007", "EVT-0018"])
-        self.assertEqual(by_event["EVT-0007"][0], 40)
-        self.assertLess(by_event["EVT-0007"][1], 300)  # 5 分钟内
-        self.assertEqual(by_event["EVT-0018"][0], 12)
-        self.assertGreater(by_event["EVT-0018"][1], 3600)  # 分散在数小时内
+        target = next(p for p in self.result.manifest["plants"] if p["plant_id"] == "P-001")["facts"]["target_post_id"]
+        self.assertEqual(rows, [("EVT-0007", target, 40)])
+        events = self.conn.execute(
+            """SELECT COUNT(DISTINCT p.event_id) FROM posts p JOIN accounts a ON a.account_id = p.account_id
+               WHERE julianday(p.created_at) - julianday(a.created_at) < 7"""
+        ).fetchone()[0]
+        self.assertGreater(events, 15)  # 新注册账号在多数事件里自然出现，不是协同的标志
+
+    def test_planted_new_accounts_are_not_contiguous_ids(self) -> None:
+        """账号编号随注册时间递增；埋入的 40 个新号之间要夹着正常注册的账号，不能靠编号连续认出。"""
+        target = next(p for p in self.result.manifest["plants"] if p["plant_id"] == "P-001")["facts"]["target_post_id"]
+        ids = sorted(int(r[0][1:]) for r in self.conn.execute(
+            """SELECT p.account_id FROM posts p JOIN accounts a ON a.account_id = p.account_id
+               WHERE p.parent_post_id = ? AND julianday(p.created_at) - julianday(a.created_at) < 7""", (target,)))
+        self.assertEqual(len(ids), 40)
+        self.assertGreater(ids[-1] - ids[0] + 1, 60)
 
     def test_same_seed_same_output(self) -> None:
         again = generate(C.DEFAULT_SEED, Path(self.tmp.name) / "b")

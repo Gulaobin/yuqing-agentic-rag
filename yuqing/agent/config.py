@@ -27,5 +27,12 @@ PRESETS: dict[str, RunConfig] = {
         max_tool_calls=8,
         retrieval="agentic",
     ),
+    "v0.2": RunConfig(
+        name="v0.2",
+        tools=("search_docs", "read_doc", "query_events", "query_posts", "query_accounts", "get_metrics"),
+        max_model_calls=10,
+        max_tool_calls=8,
+        retrieval="agentic",
+    ),
     "fixed": RunConfig(name="fixed", tools=(), max_model_calls=1, max_tool_calls=0, retrieval="fixed"),
 }

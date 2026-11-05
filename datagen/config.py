@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-GENERATOR_VERSION = "0.1.0"
+GENERATOR_VERSION = "0.2.0"
 DEFAULT_SEED = 20261103
 
 # 所有时间都是 Asia/Shanghai 本地时间，存成 "YYYY-MM-DD HH:MM:SS"，不带时区。
@@ -17,9 +17,17 @@ WINDOW_HOURS = 72  # 每个事件只保留首帖之后 72 小时内的帖子
 
 N_BASE_ACCOUNTS = 1500
 ACCOUNT_CREATED_FROM = datetime(2015, 1, 1)
-# 普通账号都在此之前注册，事件最早 9 月 1 日开始，所以普通账号发帖时注册均超过 30 天；
-# 「注册不到 7 天」的账号只来自埋入的规律。
 ACCOUNT_CREATED_UNTIL = datetime(2026, 8, 1)
+
+# 背景新账号：在事件期间持续正常注册、正常发帖的账号。
+# 有了它们，「注册不足 7 天」的账号在各事件里都会自然出现，埋入的新号也不会因为都挤在编号末尾而一眼可辨。
+N_BACKGROUND_ACCOUNTS = 900
+BACKGROUND_CREATED_FROM = datetime(2026, 8, 1)
+BACKGROUND_CREATED_UNTIL = datetime(2026, 11, 1)
+
+# 疑似协同转发的判定（与 MTH-002 一致）：至少 10 个新注册账号在 10 分钟内转发同一条帖子
+COORDINATION_MIN_ACCOUNTS = 10
+COORDINATION_WINDOW_MINUTES = 10
 
 PLATFORMS = ("weibo", "douyin", "xiaohongshu", "news")
 ACCOUNT_PLATFORM_WEIGHTS = {"weibo": 0.50, "douyin": 0.22, "xiaohongshu": 0.18, "news": 0.10}

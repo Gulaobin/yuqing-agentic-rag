@@ -284,6 +284,27 @@ class DataToolsTest(AgentTestBase):
         posts = self.run_tool("query_posts", {"event_id": "EVT-0003", "limit": 50})["posts"]
         self.assertTrue(all(len(p["text"]) <= 81 for p in posts))
 
+    def test_query_accounts(self) -> None:
+        data = self.run_tool("query_accounts", {"account_ids": ["A01104", "A00166", "A99999", "A01104"]})
+        self.assertEqual([a["account_id"] for a in data["accounts"]], ["A00166", "A01104"])
+        self.assertEqual(data["not_found"], ["A99999"])
+        media = data["accounts"][0]
+        self.assertEqual((media["verified"], media["followers"]), (1, 2380000))
+        bad = Toolbox(data_tools(self.db)).run("query_accounts", json.dumps({"account_ids": ["A1"] * 51}))
+        self.assertEqual(bad.error, "invalid_arguments")
+
+    def test_coordinated_group_is_findable_with_tools(self) -> None:
+        """M3 的调查路径：被转发帖下的转发 → 账号注册时间 → 判定新号数量。"""
+        target = "P0007-0022"
+        posts = self.run_tool("query_posts", {"event_id": "EVT-0007", "reposts_of": target, "limit": 50})["posts"]
+        accounts = self.run_tool("query_accounts", {"account_ids": [p["account_id"] for p in posts]})["accounts"]
+        created = {a["account_id"]: a["created_at"] for a in accounts}
+        from datetime import datetime, timedelta
+        fmt = "%Y-%m-%d %H:%M:%S"
+        new = {p["account_id"] for p in posts
+               if datetime.strptime(p["created_at"], fmt) - datetime.strptime(created[p["account_id"]], fmt) < timedelta(days=7)}
+        self.assertEqual(len(new), 40)
+
     def test_unknown_event_is_reported(self) -> None:
         result = Toolbox(data_tools(self.db)).run("query_posts", '{"event_id": "EVT-0999"}')
         self.assertEqual(result.error, "handler_error")
