@@ -68,8 +68,8 @@ class ConversationTest(unittest.TestCase):
         c.add_tool_result("a", "ok")
         with self.assertRaises(ConversationError):
             c.add_tool_result("a", "重复回填")
-        with self.assertRaises(ConversationError):
-            c.add_assistant(None, [ToolCall("a", "t", "{}")])  # 复用旧 id
+        c.add_assistant(None, [ToolCall("a", "t", "{}")])  # 不同轮次复用 id 是允许的
+        c.add_tool_result("a", "ok")
 
     def test_to_api_returns_copies(self) -> None:
         c = Conversation("系统")

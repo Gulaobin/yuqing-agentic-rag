@@ -96,3 +96,25 @@ $env:YUQING_INTEGRATION="1"; python -m unittest; Remove-Item Env:YUQING_INTEGRAT
 ```bash
 python -m yuqing.core.smoke
 ```
+
+## Agent
+
+同一个 Agent loop，用 `RunConfig` 区分配置（`yuqing/agent/config.py`）：
+
+| 配置 | 工具 | 预算（模型 / 工具） | 说明 |
+|---|---|---|---|
+| `v0.1` | search_docs、read_doc、query_events、query_posts | 10 / 8 | 自主检索，模型以 `submit_answer` 提交结构化回答 |
+| `fixed` | 无 | 1 / 0 | 代码按问题检索 5 个片段、模型生成一次，只用作评测对照 |
+
+```bash
+python -m datagen                                   # 业务库（只读 SQLite）
+python -m yuqing.knowledge.ingest                   # 知识库
+python -m yuqing.agent "EVT-0007 的热度现在怎么样？"   # 实时打印轨迹，最后输出回答
+python -m yuqing.agent "哪一级舆情需要当天上报？" --config fixed
+python -m yuqing.agent.replay                       # 从事件日志重放最近一次运行
+```
+
+- **结构化回答**：每条结论附证据编号，编号必须出现在本轮工具返回的结果里，否则把原因回填给模型重交；资料不足的写进 `unknowns`。
+- **预算**：模型一次要的工具超过余额时只执行余额内的；只剩最后一次模型调用或工具用完时只提供 `submit_answer`，并提示立即提交。
+- **业务数据工具**：只读连接；表名、列名、过滤条件写死在代码里，参数一律绑定。
+- **事件日志**：`var/events.sqlite`，每次模型和工具调用前后各一条，工具调用通过 `parent_call_id` 指回发起它的模型调用。
